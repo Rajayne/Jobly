@@ -28,3 +28,23 @@ router.post("/", ensureAdmin, async function (req, res, next) {
     return next(err);
   }
 });
+
+router.get("/", async function (req, res, next) {
+  const q = req.query;
+  // convert strings to integers/boolean
+  if (q.minSalary !== undefined) q.minSalary = +q.minSalary;
+  q.hasEquity = q.hasEquity === "true";
+
+  try {
+    const validate = jsonschema.validate(q, jobSearchSchema);
+    if (!validate.valid) {
+      const error = validator.errors.map((e) => e.stack);
+      throw new BadRequestError(error);
+    }
+
+    const jobs = await Job.findAll(q);
+    return res.json({ jobs });
+  } catch (err) {
+    return next(err);
+  }
+});
