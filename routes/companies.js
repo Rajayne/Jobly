@@ -6,7 +6,7 @@ const jsonschema = require("jsonschema");
 const express = require("express");
 
 const { BadRequestError } = require("../expressError");
-const { ensureLoggedIn, ensureAdmin } = require("../middleware/auth");
+const { ensureAdmin } = require("../middleware/auth");
 const Company = require("../models/company");
 
 const companyNewSchema = require("../schemas/companyNew.json");
@@ -15,15 +15,21 @@ const companySearchSchema = require("../schemas/companySearch.json");
 
 const router = new express.Router();
 
+
 /** POST / { company } =>  { company }
+ *
  * company should be { handle, name, description, numEmployees, logoUrl }
+ *
  * Returns { handle, name, description, numEmployees, logoUrl }
- * Authorization required: login */
+ *
+ * Authorization required: admin
+ */
+
 router.post("/", ensureAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, companyNewSchema);
     if (!validator.valid) {
-      const errs = validator.errors.map((e) => e.stack);
+      const errs = validator.errors.map(e => e.stack);
       throw new BadRequestError(errs);
     }
 
@@ -36,22 +42,26 @@ router.post("/", ensureAdmin, async function (req, res, next) {
 
 /** GET /  =>
  *   { companies: [ { handle, name, description, numEmployees, logoUrl }, ...] }
+ *
  * Can filter on provided search filters:
  * - minEmployees
  * - maxEmployees
  * - nameLike (will find case-insensitive, partial matches)
- * Authorization required: none */
+ *
+ * Authorization required: none
+ */
+
 router.get("/", async function (req, res, next) {
   const q = req.query;
-  // convert num strings integers
+  // arrive as strings from querystring, but we want as ints
   if (q.minEmployees !== undefined) q.minEmployees = +q.minEmployees;
   if (q.maxEmployees !== undefined) q.maxEmployees = +q.maxEmployees;
 
   try {
-    const validate = jsonschema.validate(q, companySearchSchema);
-    if (!validate.valid) {
-      const error = validator.errors.map((e) => e.stack);
-      throw new BadRequestError(error);
+    const validator = jsonschema.validate(q, companySearchSchema);
+    if (!validator.valid) {
+      const errs = validator.errors.map(e => e.stack);
+      throw new BadRequestError(errs);
     }
 
     const companies = await Company.findAll(q);
@@ -62,9 +72,13 @@ router.get("/", async function (req, res, next) {
 });
 
 /** GET /[handle]  =>  { company }
+ *
  *  Company is { handle, name, description, numEmployees, logoUrl, jobs }
  *   where jobs is [{ id, title, salary, equity }, ...]
- * Authorization required: none */
+ *
+ * Authorization required: none
+ */
+
 router.get("/:handle", async function (req, res, next) {
   try {
     const company = await Company.get(req.params.handle);
@@ -75,15 +89,21 @@ router.get("/:handle", async function (req, res, next) {
 });
 
 /** PATCH /[handle] { fld1, fld2, ... } => { company }
+ *
  * Patches company data.
+ *
  * fields can be: { name, description, numEmployees, logo_url }
+ *
  * Returns { handle, name, description, numEmployees, logo_url }
- * Authorization required: admin */
+ *
+ * Authorization required: admin
+ */
+
 router.patch("/:handle", ensureAdmin, async function (req, res, next) {
   try {
     const validator = jsonschema.validate(req.body, companyUpdateSchema);
     if (!validator.valid) {
-      const errs = validator.errors.map((e) => e.stack);
+      const errs = validator.errors.map(e => e.stack);
       throw new BadRequestError(errs);
     }
 
@@ -95,7 +115,10 @@ router.patch("/:handle", ensureAdmin, async function (req, res, next) {
 });
 
 /** DELETE /[handle]  =>  { deleted: handle }
- * Authorization: admin */
+ *
+ * Authorization: admin
+ */
+
 router.delete("/:handle", ensureAdmin, async function (req, res, next) {
   try {
     await Company.remove(req.params.handle);
@@ -104,5 +127,6 @@ router.delete("/:handle", ensureAdmin, async function (req, res, next) {
     return next(err);
   }
 });
+
 
 module.exports = router;

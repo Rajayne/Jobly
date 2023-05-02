@@ -214,9 +214,8 @@ describe("update", function () {
 describe("remove", function () {
   test("works", async function () {
     await Job.remove(testJobIds[0]);
-    const res = await db.query("SELECT id FROM jobs WHERE id=$1", [
-      testJobIds[0],
-    ]);
+    const res = await db.query(
+        "SELECT id FROM jobs WHERE id=$1", [testJobIds[0]]);
     expect(res.rows.length).toEqual(0);
   });
 
