@@ -32,7 +32,7 @@ class Job {
 
     return job;
   }
-
+  /* Find all jobs (optional filter on searchFilters) */
   static async findAll({ title, minSalary, hasEquity } = {}) {
     let query = `SELECT title, salary, equity, company_handle
                  FROM jobs`;
@@ -65,6 +65,7 @@ class Job {
     return jobsRes.rows;
   }
 
+  /* Given a job id, return data about job */
   static async get(id) {
     const jobRes = await db.query(
       `SELECT title, salary, equity, company_handle AS "companyHandle"
@@ -77,6 +78,40 @@ class Job {
 
     if (!job) throw new NotFoundError(`No job: ${id}`);
 
-    return company;
+    return job;
+  }
+
+  /* Update job data with `data` */
+  static async update(handle, data) {
+    const { setCols, values } = sqlForPartialUpdate(data, {});
+    const idVarIdx = "$" + (values.length + 1);
+
+    const querySql = `UPDATE jobs
+                      SET ${setCols} 
+                      WHERE handle = ${idVarIdx} 
+                      RETURNING id, title, salary, equity, companay_handle AS "companyHandle"`;
+    const result = await db.query(querySql, [...values, id]);
+    const job = result.rows[0];
+
+    if (!job) throw new NotFoundError(`No job: ${id}`);
+
+    return job;
+  }
+
+  /** Delete given job from database; returns undefined.
+   * Throws NotFoundError if job not found. */
+  static async remove(id) {
+    const result = await db.query(
+      `DELETE
+      FROM jobs
+      WHERE id = $1
+      RETURNING id`,
+      [id]
+    );
+    const job = result.rows[0];
+
+    if (!job) throw new NotFoundError(`No job: ${job}`);
   }
 }
+
+module.exports = Job;
